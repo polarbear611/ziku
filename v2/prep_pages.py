@@ -2,7 +2,8 @@
 # 扫描图不随仓库分发，需自备。源可以是 PDF（第 N 页 = PDF 第 N 页），也可以是图片目录（按文件名排序，第 N 张 = 第 N 页）
 # 拓本（book.json 里 "rubbing": true，黑底白字）：去朱印、去补纸 -> 反色成白底黑字 -> 缩放到字高约 100px，
 # 之后的对齐、抠图与墨迹本完全相同
-# 用法: ZIKU_BOOK=jcg python prep_pages.py <扫描.pdf | 图片目录> [起始页 结束页]
+# book.json 可选：crops（单张长图按矩形裁成多页）、mask（逐页要涂掉的矩形，源图坐标）
+# 用法: ZIKU_BOOK=jcg python prep_pages.py <扫描.pdf | 图片目录 | 单张长图> [起始页 结束页]
 import glob, os, sys
 import cv2
 import numpy as np
@@ -11,6 +12,10 @@ from PIL import Image
 import align
 
 def load(src, n):
+    crops = align.CONF.get('crops')           # 单张长图拼了多段：按 book.json 的 [x0,y0,x1,y1] 裁出第 N 页
+    if crops and os.path.isfile(src):
+        x0, y0, x1, y1 = crops[n - 1]
+        return cv2.cvtColor(np.array(Image.open(src).convert('RGB')), cv2.COLOR_RGB2BGR)[y0:y1, x0:x1].copy()
     if os.path.isdir(src):
         fs = sorted(f for f in glob.glob(f'{src}/*') if f.lower().endswith(('.webp', '.png', '.jpg', '.jpeg', '.tif', '.tiff')))
         return cv2.cvtColor(np.array(Image.open(fs[n - 1]).convert('RGB')), cv2.COLOR_RGB2BGR)
@@ -35,7 +40,7 @@ def rubbing(img, scale):
     patch = cv2.dilate((op > 95).astype(np.uint8), np.ones((15, 15), np.uint8))
     inv = 255 - g
     inv[(seal > 0) | (patch > 0)] = 255
-    inv = cv2.resize(inv, None, fx=scale, fy=scale, interpolation=cv2.INTER_AREA)
+    inv = cv2.resize(inv, None, fx=scale, fy=scale, interpolation=cv2.INTER_AREA if scale <= 1 else cv2.INTER_CUBIC)
     # 石面纹理：按局部底色拉伸，比底色深不到 50 的一律当白（否则二值化后满版噪点，字框被撑宽）
     g2 = inv.astype(np.float32)
     dark = cv2.medianBlur(inv, 61).astype(np.float32) - g2
@@ -51,6 +56,8 @@ def main():
     os.makedirs(align.PAGES, exist_ok=True)
     for n in range(a, b + 1):
         img = load(src, n)
+        for x0, y0, x1, y1 in align.CONF.get('mask', {}).get(f'p{n:02d}', []):   # 不收的题签、残印、水印：涂成底色
+            img[y0:y1, x0:x1] = 0 if align.CONF.get('rubbing') else 255
         if align.CONF.get('rubbing'):
             img = rubbing(img, align.CONF.get('scale', 1.0))
         cv2.imwrite(f'{align.PAGES}/p{n:02d}.png', img)

@@ -46,7 +46,7 @@ def build(book, t2s):
         e = {'id': it['id'], 'file': it['file'], 'page': it['page']}
         idxT.setdefault(it['char'], []).append(e)
         a = alias.get(it['char'])
-        for k in {t2s(it['char'])} | ({a, t2s(a)} if a else set()):
+        for k in sorted({t2s(it["char"])} | ({a, t2s(a)} if a else set())):   # 排序：set 遍历顺序随进程变
             idxS.setdefault(k, []).append(e)
     manifest = {'author': conf['author'], 'author_en': conf.get('author_en', ''), 'work': conf['title'],
                 'dynasty': conf['dynasty'], 'source': conf.get('source', ''),
