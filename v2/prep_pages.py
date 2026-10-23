@@ -46,7 +46,8 @@ def rubbing(img, scale):
     # 石面纹理：按局部底色拉伸，比底色深不到 50 的一律当白（否则二值化后满版噪点，字框被撑宽）
     g2 = inv.astype(np.float32)
     dark = cv2.medianBlur(inv, 61).astype(np.float32) - g2
-    inv = (255 - np.clip((dark - 50) / 70, 0, 1) * 255).astype(np.uint8)
+    lo, rg = align.CONF.get('stretch', [50, 70])                                # 反差低的拓本调小，如 [25, 50]
+    inv = (255 - np.clip((dark - lo) / rg, 0, 1) * 255).astype(np.uint8)
     n, lab, st, _ = cv2.connectedComponentsWithStats((inv < 128).astype(np.uint8), 8)
     inv[(st[lab, cv2.CC_STAT_AREA] < 20) & (lab > 0)] = 255                     # 碎斑点
     inv = cv2.copyMakeBorder(inv, 24, 24, 24, 24, cv2.BORDER_CONSTANT, value=255)   # 白边：墨迹不贴页边
@@ -102,6 +103,8 @@ def main():
             img[y0:y1, x0:x1] = fill
         if align.CONF.get('rubbing'):
             img = rubbing(img, align.CONF.get('scale', 1.0))
+            if align.CONF.get('rules'):                                           # 带界格的拓本（反色后同墨迹本）
+                img = unrule(img)
         else:
             if align.CONF.get('scale', 1.0) != 1.0:                               # 墨迹本只缩放（列距约 200px）
                 img = cv2.resize(img, None, fx=align.CONF['scale'], fy=align.CONF['scale'], interpolation=cv2.INTER_CUBIC)

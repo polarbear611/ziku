@@ -71,7 +71,7 @@ def assign(lab, st, its, s, sw):
         k = int(fr.argmax())
         lo, hi = rg[k]
         side = sorted(range(len(rg)), key=lambda j: -fr[j])
-        if fr[side[1]] * A >= CUTA * s * s and fr[k] * A >= CUTA * s * s:   # 粘连：按分界切
+        if len(rg) > 1 and fr[side[1]] * A >= CUTA * s * s and fr[k] * A >= CUTA * s * s:   # 粘连：按分界切（单字列不切）
             for j in range(len(rg)):
                 if fr[j] > 0:
                     own.setdefault(id(body[j]), []).append((i, rg[j]))

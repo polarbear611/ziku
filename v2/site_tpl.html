@@ -112,7 +112,9 @@
     <div class="bar" style="align-items:flex-start; flex-direction:column; gap:8px;">
       <div style="display:flex; gap:10px; width:100%;">
         <select id="cWork"></select>
+        <select id="cScope" title="集字範圍"></select>
         <button class="btn" onclick="genCopy()">生成臨摹字帖</button>
+        <button class="btn ghost" onclick="genCopy()" title="每個字重新隨機挑一張">換一批</button>
         <button class="btn ghost" onclick="window.print()">列印 / 匯出 PDF</button>
       </div>
       <textarea id="cText" rows="5" style="width:min(760px,100%); font-family:inherit; font-size:16px;
@@ -126,6 +128,7 @@
         　格徑
         <input type="range" id="cSize" min="56" max="120" value="84">
         <span class="hint" id="cStat"></span>
+        <span class="hint">（點擊單格可換該字的另一張）</span>
       </div>
     </div>
     <div class="missList" id="cMiss" style="display:none"></div>
@@ -227,12 +230,31 @@ function doQuery() {
   out.innerHTML = html + (miss.length ? `<p class="missList">字庫未收：${miss.join(' ')}</p>` : '');
 }
 
-/* ---- 字帖生成 ---- */
-function pickImg(ch) {
-  const entries = lookup(ch);
-  if (!entries) return null;
-  const it = ITEM[entries[0].id];
-  return it || null;
+/* ---- 字帖生成 ----
+   集字範圍：本帖，或某書法家的全部作品。字庫是一字對多圖（不去重），
+   每個字從範圍內該字的全部字圖裡隨機挑一張；「換一批」整體重抽，點單格只換該格 */
+const ITEMS_OF = Object.fromEntries(WORKS.map(w => [w.key, Object.fromEntries(w.items.map(it => [it.id, it]))]));
+const AUTHORS = DB.authors.filter(a => a.works.length);
+const cScope = document.getElementById('cScope');
+cScope.innerHTML = '<option value="">集字範圍：本帖</option>' + AUTHORS.map(a =>
+  `<option value="${a.name}">按書法家集字：${a.name}（${a.works.length} 部 · ${a.works.reduce((n, w) => n + w.items.length, 0)} 字圖）</option>`).join('');
+cScope.onchange = () => { document.getElementById('cWork').disabled = !!cScope.value; if (document.getElementById('cText').value.trim()) genCopy(); };
+function pool(ch) {                    // 範圍內該字的全部字圖 [{it, w}]
+  const ws = cScope.value ? AUTHORS.find(a => a.name === cScope.value).works : [W];
+  const out = [];
+  for (const w of ws) {
+    const es = (w.idxT[ch] && w.idxT[ch].length) ? w.idxT[ch] : (w.idxS[ch] || []);
+    for (const e of es) { const it = ITEMS_OF[w.key][e.id]; if (it) out.push({it, w}); }
+  }
+  return out;
+}
+const rand = a => a[Math.floor(Math.random() * a.length)];
+let PICKS = [];                         // 當前字帖每格：{ch, pool, pick}
+function reroll(i) {
+  const c = PICKS[i];
+  if (!c.pool.length) return;
+  if (c.pool.length > 1) { let p; do p = rand(c.pool); while (p === c.pick); c.pick = p; }
+  renderCopy();
 }
 function frameHTML(kind) {
   if (kind === 'mi') return '<div class="frame"></div><div class="d1"></div><div class="d2"></div>';
@@ -241,29 +263,34 @@ function frameHTML(kind) {
 }
 function genCopy() {
   const text = document.getElementById('cText').value.replace(/\s+/g, '');
+  PICKS = [...text].map(ch => { const p = pool(ch); return {ch, pool: p, pick: p.length ? rand(p) : null}; });
+  renderCopy();
+}
+function renderCopy() {
   const kind = document.querySelector('input[name=gf]:checked').value;
   const sz = document.getElementById('cSize').value + 'px';
   const area = document.getElementById('copyArea');
   area.style.setProperty('--gsz', sz);
   let html = '', miss = [];
-  let n = 0;
-  for (const ch of text) {
-    const it = pickImg(ch);
-    if (it) {
-      html += `<div class="mig" style="--gsz:${sz}">${frameHTML(kind)}<img src="${BASE + (it.v || it.f)}"></div>`;
+  const used = new Set();
+  PICKS.forEach((c, i) => {
+    if (c.pick) {
+      const {it, w} = c.pick; used.add(w.key);
+      html += `<div class="mig" style="--gsz:${sz};cursor:pointer" onclick="reroll(${i})"
+                 title="${c.ch} · ${w.author.name}《${w.title}》第${it.page}頁 · ${it.id}（共 ${c.pool.length} 張，點擊換一張）">${frameHTML(kind)}<img src="${BASE + (it.v || it.f)}"></div>`;
     } else {
       html += `<div class="mig" style="--gsz:${sz}">${frameHTML(kind)}<div class="miss">缺</div></div>`;
-      miss.push(ch);
+      miss.push(c.ch);
     }
-    n++;
-  }
+  });
   area.innerHTML = html;
-  document.getElementById('cStat').textContent = `共 ${n} 格`;
+  document.getElementById('cStat').textContent = `共 ${PICKS.length} 格` + (cScope.value ? `，取自 ${used.size} 部作品` : '');
   const ml = document.getElementById('cMiss');
   if (miss.length) { ml.style.display = ''; ml.textContent = '字庫未收（以空格呈現）：' + [...new Set(miss)].join(' '); }
   else ml.style.display = 'none';
 }
-document.getElementById('cSize').oninput = genCopy;
+document.getElementById('cSize').oninput = renderCopy;
+document.querySelectorAll('input[name=gf]').forEach(r => r.onchange = renderCopy);
 
 /* init */
 useWork(WORKS[0].key);
