@@ -58,7 +58,11 @@
         background: linear-gradient(to top right, transparent calc(50% - .5px), #eec2c2 calc(50% - .5px), #eec2c2 calc(50% + .5px), transparent calc(50% + .5px)); }
   .mig .d2 { position: absolute; inset: 0; pointer-events: none;
         background: linear-gradient(to bottom right, transparent calc(50% - .5px), #eec2c2 calc(50% - .5px), #eec2c2 calc(50% + .5px), transparent calc(50% + .5px)); }
-  .mig img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
+  .mig img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; opacity: 0; transition: opacity .15s; }
+  .mig.ok img { opacity: 1; }
+  .mig .ph { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;   /* 字圖未到時的淡色佔位 */
+        color: #e6dccb; font-size: calc(var(--gsz) * .5); }
+  .mig.ok .ph { display: none; }
   .mig .miss { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
         color: #c66; font-size: 11px; }
   #modal { position: fixed; inset: 0; background: rgba(40,30,10,.72); display: none;
@@ -114,7 +118,7 @@
         <select id="cWork"></select>
         <select id="cScope" title="集字範圍"></select>
         <button class="btn" onclick="genCopy()">生成臨摹字帖</button>
-        <button class="btn ghost" onclick="genCopy()" title="每個字重新隨機挑一張">換一批</button>
+        <button class="btn ghost" onclick="genCopy(true)" title="每個字重新隨機挑一張">換一批</button>
         <button class="btn ghost" onclick="window.print()">列印 / 匯出 PDF</button>
       </div>
       <textarea id="cText" rows="5" style="width:min(760px,100%); font-family:inherit; font-size:16px;
@@ -243,7 +247,7 @@ for (const w of WORKS) {
 const cScope = document.getElementById('cScope');
 cScope.innerHTML = '<option value="">集字範圍：本帖</option>' + LIBS.map(l =>
   `<option value="${l.id}">按書法家集字：${l.id}（${l.works.length} 部 · ${l.works.reduce((n, w) => n + w.items.length, 0)} 字圖）</option>`).join('');
-cScope.onchange = () => { document.getElementById('cWork').disabled = !!cScope.value; if (document.getElementById('cText').value.trim()) genCopy(); };
+cScope.onchange = () => { document.getElementById('cWork').disabled = !!cScope.value; prefetch(); if (document.getElementById('cText').value.trim()) genCopy(); };
 function pool(ch) {                    // 範圍內該字的全部字圖 [{it, w}]
   const ws = cScope.value ? LIBS.find(l => l.id === cScope.value).works : [W];
   const out = [];
@@ -255,22 +259,41 @@ function pool(ch) {                    // 範圍內該字的全部字圖 [{it, w
 }
 const rand = a => a[Math.floor(Math.random() * a.length)];
 let PICKS = [];                         // 當前字帖每格：{ch, pool, pick}
-function reroll(i) {
+const srcOf = it => BASE + (it.v || it.f);
+function reroll(i) {                    // 只換這一格：新圖載入後再替換，不重畫整帖
   const c = PICKS[i];
-  if (!c.pool.length) return;
-  if (c.pool.length > 1) { let p; do p = rand(c.pool); while (p === c.pick); c.pick = p; }
-  renderCopy();
+  if (c.pool.length < 2) return;
+  let p; do p = rand(c.pool); while (p === c.pick); c.pick = p;
+  const cell = document.querySelector(`#copyArea .mig[data-i="${i}"]`), img = cell.querySelector('img');
+  const pre = new Image();
+  pre.onload = pre.onerror = () => { if (c.pick === p) { img.src = pre.src; cell.title = cellTitle(c); } };
+  pre.src = srcOf(p.it);
 }
 function frameHTML(kind) {
   if (kind === 'mi') return '<div class="frame"></div><div class="d1"></div><div class="d2"></div>';
   if (kind === 'jiu') return '<div class="frame"></div><div class="d1"></div><div class="d2"></div><div class="frame" style="inset:25%"></div>';
   return '';
 }
-function genCopy() {
-  const text = document.getElementById('cText').value.replace(/\s+/g, '');
-  PICKS = [...text].map(ch => { const p = pool(ch); return {ch, pool: p, pick: p.length ? rand(p) : null}; });
+/* 預取：輸入停頓 300ms 後先抽好每格字圖並在後臺下載，點「生成」時直接用這一批（圖大多已在快取） */
+let PRE = null;                         // {key, picks}
+const scopeKey = text => `${cScope.value || W.key}\u0000${text}`;
+const cleanText = () => document.getElementById('cText').value.replace(/\s+/g, '');
+const drawPicks = text => [...text].map(ch => { const p = pool(ch); return {ch, pool: p, pick: p.length ? rand(p) : null}; });
+function prefetch() {
+  const text = cleanText();
+  if (!text) { PRE = null; return; }
+  PRE = {key: scopeKey(text), picks: drawPicks(text)};
+  for (const c of PRE.picks) if (c.pick) new Image().src = srcOf(c.pick.it);
+}
+let preTimer;
+document.getElementById('cText').addEventListener('input', () => { clearTimeout(preTimer); preTimer = setTimeout(prefetch, 300); });
+function genCopy(fresh) {               // fresh：「換一批」，不用預取的那批
+  const text = cleanText();
+  PICKS = (!fresh && PRE && PRE.key === scopeKey(text)) ? PRE.picks : drawPicks(text);
+  PRE = null;
   renderCopy();
 }
+const cellTitle = c => `${c.ch} · ${c.pick.w.author.name}《${c.pick.w.title}》第${c.pick.it.page}頁 · ${c.pick.it.id}（共 ${c.pool.length} 張，點擊換一張）`;
 function renderCopy() {
   const kind = document.querySelector('input[name=gf]:checked').value;
   const sz = document.getElementById('cSize').value + 'px';
@@ -280,9 +303,9 @@ function renderCopy() {
   const used = new Set();
   PICKS.forEach((c, i) => {
     if (c.pick) {
-      const {it, w} = c.pick; used.add(w.key);
-      html += `<div class="mig" style="--gsz:${sz};cursor:pointer" onclick="reroll(${i})"
-                 title="${c.ch} · ${w.author.name}《${w.title}》第${it.page}頁 · ${it.id}（共 ${c.pool.length} 張，點擊換一張）">${frameHTML(kind)}<img src="${BASE + (it.v || it.f)}"></div>`;
+      used.add(c.pick.w.key);
+      html += `<div class="mig" data-i="${i}" style="--gsz:${sz};cursor:pointer" onclick="reroll(${i})"
+                 title="${cellTitle(c)}">${frameHTML(kind)}<span class="ph">${c.ch}</span><img src="${srcOf(c.pick.it)}" onload="this.parentNode.classList.add('ok')"></div>`;
     } else {
       html += `<div class="mig" style="--gsz:${sz}">${frameHTML(kind)}<div class="miss">缺</div></div>`;
       miss.push(c.ch);
