@@ -153,7 +153,7 @@ function useWork(key) {
   ITEM = Object.fromEntries(W.items.map(it => [it.id, it]));
   for (const id of ['bWork','qWork','cWork']) document.getElementById(id).value = W.key;
   document.getElementById('sub').textContent =
-    `${W.author.name}《${W.title}》· ${W.author.dynasty}${W.source ? ' · ' + W.source : ''} · ${W.items.length} 字圖 / ${Object.keys(W.idxT).length} 字`
+    `${W.author.name}《${W.title}》· ${W.author.dynasty} · ${W.script}${W.source ? ' · ' + W.source : ''} · ${W.items.length} 字圖 / ${Object.keys(W.idxT).length} 字`
     + (WORKS.length > 1 ? `　（共 ${WORKS.length} 部字帖）` : '');
 }
 /* 查詢：繁體直接命中；簡體走簡體索引 */
@@ -177,7 +177,7 @@ document.querySelectorAll('nav button').forEach(b => b.onclick = () => {
 /* ---- 下拉 ---- */
 for (const id of ['bWork','qWork','cWork']) {
   const sel = document.getElementById(id);
-  sel.innerHTML = WORKS.map(w => `<option value="${w.key}">${w.author.name}（${w.author.dynasty}）· ${w.title}</option>`).join('');
+  sel.innerHTML = WORKS.map(w => `<option value="${w.key}">${w.author.name}（${w.author.dynasty}）· ${w.title} · ${w.script}</option>`).join('');
   sel.onchange = () => {
     useWork(sel.value); bPage = 0; renderBrowse();
     if (document.getElementById('qInput').value.trim()) doQuery();
@@ -231,16 +231,21 @@ function doQuery() {
 }
 
 /* ---- 字帖生成 ----
-   集字範圍：本帖，或某書法家的全部作品。字庫是一字對多圖（不去重），
+   集字範圍：本帖，或某書法家同一書體的全部作品（楷、行不混用）。字庫是一字對多圖（不去重），
    每個字從範圍內該字的全部字圖裡隨機挑一張；「換一批」整體重抽，點單格只換該格 */
 const ITEMS_OF = Object.fromEntries(WORKS.map(w => [w.key, Object.fromEntries(w.items.map(it => [it.id, it]))]));
-const AUTHORS = DB.authors.filter(a => a.works.length);
+const LIBS = [];                        // 集字庫 = 書法家 + 書體：楷、行分庫，同一書家也不混用
+for (const w of WORKS) {
+  let l = LIBS.find(l => l.author === w.author.name && l.script === w.script);
+  if (!l) LIBS.push(l = {id: w.author.name + '·' + w.script, author: w.author.name, script: w.script, works: []});
+  l.works.push(w);
+}
 const cScope = document.getElementById('cScope');
-cScope.innerHTML = '<option value="">集字範圍：本帖</option>' + AUTHORS.map(a =>
-  `<option value="${a.name}">按書法家集字：${a.name}（${a.works.length} 部 · ${a.works.reduce((n, w) => n + w.items.length, 0)} 字圖）</option>`).join('');
+cScope.innerHTML = '<option value="">集字範圍：本帖</option>' + LIBS.map(l =>
+  `<option value="${l.id}">按書法家集字：${l.id}（${l.works.length} 部 · ${l.works.reduce((n, w) => n + w.items.length, 0)} 字圖）</option>`).join('');
 cScope.onchange = () => { document.getElementById('cWork').disabled = !!cScope.value; if (document.getElementById('cText').value.trim()) genCopy(); };
 function pool(ch) {                    // 範圍內該字的全部字圖 [{it, w}]
-  const ws = cScope.value ? AUTHORS.find(a => a.name === cScope.value).works : [W];
+  const ws = cScope.value ? LIBS.find(l => l.id === cScope.value).works : [W];
   const out = [];
   for (const w of ws) {
     const es = (w.idxT[ch] && w.idxT[ch].length) ? w.idxT[ch] : (w.idxS[ch] || []);

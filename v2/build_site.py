@@ -4,7 +4,8 @@
 #   site/网站/{index.html, db.js}        同一页面的另一份拷贝（引用 db.js）
 #   site/<作品>/manifest.json, index.json, index_simplified.json
 #   site/<作品>/glyphs/pNN_IIII.{png,svg}  透明底 PNG + 矢量 SVG
-# 收录哪些帖：v2/books/*/book.json（每帖的元数据、不入库清单 skip/drop、检索别名 alias）
+# 收录哪些帖：v2/books/*/book.json（每帖的元数据、书体 script、不入库清单 skip/drop、检索别名 alias）
+# 书体（楷书 / 行书）各成一库：网站按「书法家 + 书体」集字，不同书体不混用
 # 用法: python build_site.py [帖 ...]   默认全部
 import json, os, glob, shutil, sys, time, subprocess
 from opencc import OpenCC
@@ -48,7 +49,7 @@ def build(book, t2s):
         a = alias.get(it['char'])
         for k in sorted({t2s(it["char"])} | ({a, t2s(a)} if a else set())):   # 排序：set 遍历顺序随进程变
             idxS.setdefault(k, []).append(e)
-    manifest = {'author': conf['author'], 'author_en': conf.get('author_en', ''), 'work': conf['title'],
+    manifest = {'author': conf['author'], 'author_en': conf.get('author_en', ''), 'work': conf['title'], 'script': conf['script'],
                 'dynasty': conf['dynasty'], 'source': conf.get('source', ''),
                 'pipeline': 'v2（文字驱动对齐 + 墨块归属 + 透明底/矢量）',
                 'built': time.strftime('%Y-%m-%d %H:%M'), 'items': items}
@@ -58,7 +59,7 @@ def build(book, t2s):
     pages = sorted({it['page'] for it in main_items})
     print(f'{book}: 字图 {len(main_items)}（另有夹注 {len(items) - len(main_items)}）/ {len(idxT)} 字，'
           f'页 {pages[0]}–{pages[-1]} 共 {len(pages)} 页')
-    work = {'key': conf['key'], 'title': conf['title'], 'source': conf.get('source', ''), 'count': len(main_items),
+    work = {'key': conf['key'], 'title': conf['title'], 'script': conf['script'], 'source': conf.get('source', ''), 'count': len(main_items),
             'items': [{'id': it['id'], 'ch': it['char'], 'page': it['page'],
                        'f': f"{wdir}/{it['file']}", 'v': f"{wdir}/{it['svg']}"} for it in main_items],
             'idxS': idxS, 'idxT': idxT}
