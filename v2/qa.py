@@ -11,7 +11,7 @@ import numpy as np
 from collections import defaultdict
 import align
 
-OUT = f'{align.ROOT}/v2/out3'
+OUT = align.OUT3
 SZ = 40
 
 def feat(img, it):
@@ -32,7 +32,7 @@ def main():
     extras = {}
     for fn in sorted(glob.glob(f'{OUT}/p??.json')):
         pid = os.path.basename(fn)[:3]
-        img = cv2.imread(f'{align.WORK}/pages/{pid}.png')
+        img = cv2.imread(f'{align.PAGES}/{pid}.png')
         for it in json.load(open(fn)):
             it['pid'] = pid
             it['f'] = feat(img, it)

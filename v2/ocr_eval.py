@@ -17,7 +17,7 @@ def crops(which, pid):
             if it['page'] == int(pid[1:]) and it['role'] == 'main':
                 yield it['char'], cv2.imread(f"{LIB}/{it['file']}")
     else:
-        img = cv2.imread(f'{align.WORK}/pages/{pid}.png'); H, W = img.shape[:2]
+        img = cv2.imread(f'{align.PAGES}/{pid}.png'); H, W = img.shape[:2]
         for r in json.load(open(f'{align.OUT}/{pid}.json')):
             if r['note']: continue
             p = 6

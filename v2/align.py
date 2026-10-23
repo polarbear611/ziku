@@ -10,6 +10,17 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 WORK = f'{ROOT}/work'
 OUT = f'{ROOT}/v2/out'
 os.makedirs(OUT, exist_ok=True)
+# 多部字帖：环境变量 ZIKU_BOOK 选帖（v2/books/<帖>/book.json），默认姜夔《保母帖》。
+# 保母帖沿用最早的目录（work/pages、v2/text、v2/out3、v2/glyph），新帖的数据都放在 v2/books/<帖>/ 下
+BOOK = os.environ.get('ZIKU_BOOK', 'baomu')
+BOOKDIR = f'{ROOT}/v2/books/{BOOK}'
+CONF = json.load(open(f'{BOOKDIR}/book.json'))
+if BOOK == 'baomu':
+    PAGES, TEXT, TOKENS = f'{WORK}/pages', f'{ROOT}/v2/text', f'{WORK}/tokens'
+    OUT3, GL = f'{ROOT}/v2/out3', f'{ROOT}/v2/glyph'
+else:
+    PAGES, TEXT, TOKENS = f'{BOOKDIR}/pages', f'{BOOKDIR}/text', None
+    OUT3, GL = f'{BOOKDIR}/out3', f'{BOOKDIR}/glyph'
 FONT = os.environ.get('ZIKU_FONT', '/System/Library/Fonts/Supplemental/Songti.ttc')   # 宋体，用于估字高；非 macOS 用环境变量指定
 STEP = 3
 
@@ -18,8 +29,8 @@ def column_texts(pid):
     """tokens 每行 -> [(字, is_note)]，去掉 -、@2、% 等 v1 的格标记
     v2/text/<pid>.tokens 存在时优先用它（v2 自己的释文修正，不改 work/ 下的原件）"""
     cols = []
-    fix = f'{ROOT}/v2/text/{pid}.tokens'
-    for line in open(fix if os.path.exists(fix) else f'{WORK}/tokens/{pid}.tokens'):
+    fix = f'{TEXT}/{pid}.tokens'
+    for line in open(fix if os.path.exists(fix) or not TOKENS else f'{TOKENS}/{pid}.tokens'):
         if not line.strip():
             continue
         seq = []
@@ -136,7 +147,7 @@ def align_column(b, x0, x1, seq):
     cp = np.concatenate([[0], np.cumsum(prof)])
     ps = smooth(prof, 5)
     rowink = np.median(prof[ink]) if ink.any() else 1
-    cutc = ps[pos] / rowink                       # 切在墨上的代价
+    cutc = ps[np.minimum(pos, H - 1)] / rowink    # 切在墨上的代价（墨迹到页底时 pos 可等于 H）
     N = len(seq)
     r = np.array([glyph_ratio(c)[0] * (0.55 if note else 1.0) for c, note in seq])
     span = Y1 - Y0
@@ -200,7 +211,7 @@ def char_box(b, x0, x1, t0, t1):
     return x0 + int(big[0][0]), x0 + int(big[-1][-1]) + 1
 
 def run(pid):
-    img = cv2.imread(f'{WORK}/pages/{pid}.png')
+    img = cv2.imread(f'{PAGES}/{pid}.png')
     b = binarize(img)
     texts = column_texts(pid)
     cols = find_columns(b, len(texts))

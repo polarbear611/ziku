@@ -9,8 +9,8 @@ import cv2, json, os, sys
 import numpy as np
 import align
 
-OUT3 = f'{align.ROOT}/v2/out3'
-GL = f'{align.ROOT}/v2/glyph'
+OUT3 = align.OUT3
+GL = align.GL
 FILL = 0.86        # 字身 S：使 90% 的字墨迹长边 ≤ S × FILL，其余整体缩小
 WEAK = 12          # 弱阈：纸色差 > WEAK 的淡墨，只要与本字强墨相连就并入（滞后阈值，补回飞白/淡笔）
 FAINTA = 30        # 不相连的淡墨块面积下限（像素）
@@ -62,7 +62,7 @@ def assign(lab, st, its, s, sw):
         if nb is not None:
             own.setdefault(id(nb), []).append((i, None)); continue
         ov = max(0, min(X + W, ax + half) - max(X, ax - half))
-        if ov < OVL * W and W < sw:
+        if ov < OVL * W and (W < sw or ov == 0):          # 宽墨块只要碰到字轴带就留（长横）；完全不碰的是邻列的字
             continue
         if H <= LINEH and W >= 4 * H and W >= 12:         # 框线碎片
             continue
@@ -131,7 +131,7 @@ def assign(lab, st, its, s, sw):
     return own
 
 def run(pid):
-    img = cv2.imread(f'{align.WORK}/pages/{pid}.png')
+    img = cv2.imread(f'{align.PAGES}/{pid}.png')
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY).astype(np.float32)
     bg = cv2.medianBlur(gray.astype(np.uint8), 61).astype(np.float32)
     dark = bg - gray

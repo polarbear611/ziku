@@ -6,7 +6,7 @@ import align
 pid = sys.argv[1]
 OUTD = sys.argv[2] if len(sys.argv) > 2 else align.OUT
 res = json.load(open(f'{OUTD}/{pid}.json'))
-img = cv2.cvtColor(cv2.imread(f'{align.WORK}/pages/{pid}.png'), cv2.COLOR_BGR2RGB)
+img = cv2.cvtColor(cv2.imread(f'{align.PAGES}/{pid}.png'), cv2.COLOR_BGR2RGB)
 H, W = img.shape[:2]
 font = ImageFont.truetype('/System/Library/Fonts/STHeiti Medium.ttc', 22)
 C, T = 12, 90

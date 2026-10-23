@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>书法字库 · 姜夔《跋王献之保母帖》</title>
+<title>书法字库</title>
 <style>
   :root {
     --paper: #f5efe0; --paper2: #ece3cd; --ink: #3a3128; --ink2: #7a6d5a;
@@ -78,7 +78,7 @@
 <body>
 <header>
   <h1>書法字庫</h1>
-  <div class="sub" id="sub">姜夔《跋王獻之保母帖》· 南宋 · 故宮博物院藏本</div>
+  <div class="sub" id="sub"></div>
   <nav>
     <button data-v="browse" class="on">全部瀏覽</button>
     <button data-v="query">按字查詢</button>
@@ -141,10 +141,18 @@
 <script src="/*DBSRC*/"></script>
 <script>
 const DB = window.DB;
-const W = DB.authors[0].works[0];   // 目前單作品
 const BASE = '/*BASE*/';            // 字圖路徑前綴（網站/ 下的拷貝為 ../）
-const ITEM = Object.fromEntries(W.items.map(it => [it.id, it]));
-document.getElementById('sub').textContent += ` · ${W.items.length} 字圖 / ${Object.keys(W.idxT).length} 字`;
+/* 多作品：三個視圖共用「當前作品」W，任一下拉切換即同步 */
+const WORKS = DB.authors.flatMap(a => a.works.map(w => Object.assign(w, {author: a})));
+let W, ITEM;
+function useWork(key) {
+  W = WORKS.find(w => w.key === key) || WORKS[0];
+  ITEM = Object.fromEntries(W.items.map(it => [it.id, it]));
+  for (const id of ['bWork','qWork','cWork']) document.getElementById(id).value = W.key;
+  document.getElementById('sub').textContent =
+    `${W.author.name}《${W.title}》· ${W.author.dynasty}${W.source ? ' · ' + W.source : ''} · ${W.items.length} 字圖 / ${Object.keys(W.idxT).length} 字`
+    + (WORKS.length > 1 ? `　（共 ${WORKS.length} 部字帖）` : '');
+}
 /* 查詢：繁體直接命中；簡體走簡體索引 */
 function lookup(ch) {
   if (W.idxT[ch] && W.idxT[ch].length) return W.idxT[ch];
@@ -166,7 +174,12 @@ document.querySelectorAll('nav button').forEach(b => b.onclick = () => {
 /* ---- 下拉 ---- */
 for (const id of ['bWork','qWork','cWork']) {
   const sel = document.getElementById(id);
-  sel.innerHTML = `<option value="${W.key}">${DB.authors[0].name}（${DB.authors[0].dynasty}）· ${W.title}</option>`;
+  sel.innerHTML = WORKS.map(w => `<option value="${w.key}">${w.author.name}（${w.author.dynasty}）· ${w.title}</option>`).join('');
+  sel.onchange = () => {
+    useWork(sel.value); bPage = 0; renderBrowse();
+    if (document.getElementById('qInput').value.trim()) doQuery();
+    if (document.getElementById('cText').value.trim()) genCopy();
+  };
 }
 
 /* ---- 瀏覽 ---- */
@@ -253,6 +266,7 @@ function genCopy() {
 document.getElementById('cSize').oninput = genCopy;
 
 /* init */
+useWork(WORKS[0].key);
 renderBrowse();
 </script>
 </body>

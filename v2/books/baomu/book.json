@@ -1,0 +1,8 @@
+{
+ "key": "jiangkui-baomutie",
+ "dir": "姜夔-跋王献之保母帖",
+ "author": "姜夔", "author_en": "Jiang Kui", "dynasty": "南宋",
+ "title": "跋王献之保母帖", "source": "故宫博物院藏本",
+ "skip": ["々"],
+ "drop": [["p05", 51], ["p05", 52]]
+}

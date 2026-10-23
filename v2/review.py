@@ -4,7 +4,7 @@
 import json, os, cv2, html
 import align
 
-OUT = f'{align.ROOT}/v2/out3'
+OUT = align.OUT3
 RV = f'{align.ROOT}/v2/review'
 os.makedirs(f'{RV}/img', exist_ok=True)
 PAD = 4
@@ -31,7 +31,7 @@ def main():
             continue
         pid = it['pid']
         if pid not in pages:
-            pages[pid] = cv2.imread(f'{align.WORK}/pages/{pid}.png')
+            pages[pid] = cv2.imread(f'{align.PAGES}/{pid}.png')
         fn = f"{pid}_{it['idx']:03d}.jpg"
         ctx(pages[pid], it['x'], it['y'], it['w'], it['h'], fn)
         rows.append({'key': f"{pid}:{it['idx']}", 'pid': pid, 'col': it['col'], 'char': it['char'],
@@ -40,7 +40,7 @@ def main():
                      'single': f'img/s_{fn}', 'size': f"{it['w']}×{it['h']}", 'n': it['idx']})
     for pid, ex in qa['extras'].items():
         if pid not in pages:
-            pages[pid] = cv2.imread(f'{align.WORK}/pages/{pid}.png')
+            pages[pid] = cv2.imread(f'{align.PAGES}/{pid}.png')
         for k, j in enumerate(ex['junk']):
             fn = f'{pid}_junk{k}.jpg'
             ctx(pages[pid], j['x'], j['y'], j['w'], j['h'], fn)

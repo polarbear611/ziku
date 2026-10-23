@@ -16,7 +16,7 @@ UNK = 2.5
 MAXSPAN = 8
 SHIFT = 8
 import os
-OUT = f'{align.ROOT}/v2/out3'
+OUT = align.OUT3
 os.makedirs(OUT, exist_ok=True)
 
 def prepare(img, b, x0, x1, seq_hint):
@@ -123,7 +123,7 @@ def backtrack(pr, seq, tables, k):
     return out[::-1]
 
 def run(pid):
-    img = cv2.imread(f'{align.WORK}/pages/{pid}.png')
+    img = cv2.imread(f'{align.PAGES}/{pid}.png')
     b = align.binarize(img)
     texts = align.column_texts(pid)
     cols = align.find_columns(b, len(texts))

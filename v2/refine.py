@@ -7,7 +7,7 @@ import cv2, json, os, shutil, sys
 import numpy as np
 import align
 
-OUT3 = f'{align.ROOT}/v2/out3'
+OUT3 = align.OUT3
 
 def place_notes(b, lab, st, mains, notes, axis, sw, pitch, s, log):
     """一段连续注文 -> 在其前后正文字之间、字轴以外（或正文字纵向范围以外）的墨块里找小字"""
@@ -71,7 +71,7 @@ def run(pid):
     if not os.path.exists(raw):
         shutil.copy(f'{OUT3}/{pid}.json', raw)
     items = json.load(open(raw))
-    img = cv2.imread(f'{align.WORK}/pages/{pid}.png')
+    img = cv2.imread(f'{align.PAGES}/{pid}.png')
     b = align.binarize(img)
     n, lab, st, _ = cv2.connectedComponentsWithStats(b, 8)
     mains_all = [it for it in items if not it['note']]   # align3 输出里注文的框是占位的 0
@@ -81,7 +81,7 @@ def run(pid):
     axes = {c: float(np.median([it['x'] + it['w'] / 2 for it in mains_all if it['col'] == c])) for c in cols}
     pitch = float(np.median(np.abs(np.diff([axes[c] for c in cols])))) if len(cols) > 1 else 3 * sw
     manual = {}
-    mf = f'{align.ROOT}/v2/text/{pid}_notes.json'
+    mf = f'{align.TEXT}/{pid}_notes.json'
     if os.path.exists(mf):
         manual = {int(k): v for k, v in json.load(open(mf)).items() if not k.startswith('_')}
     log = []

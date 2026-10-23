@@ -6,7 +6,7 @@ import numpy as np
 import potrace
 import align
 
-GL = f'{align.ROOT}/v2/glyph'
+GL = align.GL
 TH = 0.35          # alpha 阈值：低于它的淡墨不进轮廓
 BLUR = 1.2         # 描轮廓前的高斯平滑（256 图上的像素）
 TURD = 15          # 面积小于此（像素，256 图上）的斑点丢弃
@@ -29,7 +29,7 @@ def trace(alpha):
 
 def run(pid):
     meta = json.load(open(f'{GL}/{pid}/meta.json'))
-    img = cv2.imread(f'{align.WORK}/pages/{pid}.png')
+    img = cv2.imread(f'{align.PAGES}/{pid}.png')
     N = None
     for it in meta['items']:
         fn = f"{GL}/{pid}/{it['idx']:03d}"

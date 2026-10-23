@@ -4,7 +4,7 @@ import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 import align
 lv, out = sys.argv[1], sys.argv[2]
-q = json.load(open(f'{align.ROOT}/v2/out3/qa.json'))
+q = json.load(open(f'{align.OUT3}/qa.json'))
 its = [i for i in q['items'] if i['level'] == lv]
 font = ImageFont.truetype('/System/Library/Fonts/STHeiti Medium.ttc', 18)
 C, T = 10, 100
@@ -12,7 +12,7 @@ sh = Image.new('RGB', (C * T, ((len(its) + C - 1) // C) * (T + 40)), 'white'); d
 pages = {}
 for k, it in enumerate(its):
     if it['pid'] not in pages:
-        pages[it['pid']] = cv2.cvtColor(cv2.imread(f"{align.WORK}/pages/{it['pid']}.png"), cv2.COLOR_BGR2RGB)
+        pages[it['pid']] = cv2.cvtColor(cv2.imread(f"{align.PAGES}/{it['pid']}.png"), cv2.COLOR_BGR2RGB)
     img = pages[it['pid']]; p = 5
     c = img[max(0, it['y'] - p):it['y'] + it['h'] + p, max(0, it['x'] - p):it['x'] + it['w'] + p]
     s = max(c.shape[:2]); sq = np.full((s, s, 3), 200, np.uint8)

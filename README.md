@@ -2,7 +2,12 @@
 
 把书法字帖的扫描页逐字切开，每个字绑定释文，建成「作者 - 字 - 字图」一对多字库（同一个字的多个写法全部保留），并附一个零依赖的静态网站：浏览字图、按字查询、输入一段文字生成临摹字帖（米字格 / 九宫格）。
 
-第一部字帖是南宋姜夔《跋王献之保母帖》（故宫藏本）第 1–18 页：**正文 2356 张字图，636 个不同的字**，每个字都有透明底 PNG 和矢量 SVG 两种格式。
+目前收录两部字帖，每个字都有透明底 PNG 和矢量 SVG 两种格式：
+
+| 字帖 | 类型 | 字图 / 不同的字 |
+|---|---|---|
+| 南宋 姜夔《跋王献之保母帖》（故宫藏本）第 1–18 页 | 墨迹，行书 | 2356 / 636 |
+| 唐 欧阳询《九成宫醴泉铭》拓本，剪裱册 48 页 | 拓本，楷书 | 1060 / 614 |
 
 在线示例：https://ziku.xlingdata.com/
 
@@ -33,14 +38,15 @@ cd v2
 python3 -m venv venv
 venv/bin/pip install -r requirements.txt   # 国内可加 -i https://pypi.tuna.tsinghua.edu.cn/simple；potracer 若缺可换阿里云源
 
-# 1. 准备扫描页（扫描图不随仓库分发，需自备）
+# 1. 准备扫描页（扫描图不随仓库分发，需自备）；用环境变量 ZIKU_BOOK 选帖，默认 baomu
 venv/bin/python prep_pages.py /path/to/跋王献之保母帖.pdf 1 18   # -> work/pages/p01.png …（宽 2000px）
+# ZIKU_BOOK=jcg venv/bin/python prep_pages.py /path/to/九成宫图片目录 1 48   # 拓本：去印、去补纸、反色
 
 # 2. 逐页跑：对齐 -> 夹注定位 -> 抠图 -> 矢量化
 ./run_pages.sh p01 p02 p03     # 日志在 out3/pNN.log；预览页 glyph/pNN/index.html
 
 # 3. 汇总成字库和网站
-venv/bin/python build_site.py  # -> v2/site/
+venv/bin/python build_site.py  # -> v2/site/（收录 v2/books/ 下全部字帖）
 cd site && python3 -m http.server 8801   # 打开 http://localhost:8801/
 ```
 
@@ -50,7 +56,8 @@ cd site && python3 -m http.server 8801   # 打开 http://localhost:8801/
 ## 目录
 
 ```
-v2/                    流水线（align3 → refine → glyph → vector → build_site）
+v2/                    流水线（prep_pages → [seed_text] → align3 → refine → glyph → vector → build_site）
+  books/<帖>/          每部字帖一个目录：book.json（元数据、检索别名、不入库清单）、释文；新帖的页面图和产物也放这里
   text/                释文修正与夹注人工框（存在时优先于 work/tokens），逐条依据见 text/README.md
   site_tpl.html        字库网站页面模板
   glyph_tpl.html       单页字图预览模板（米字格、PNG/SVG/原图切换）
@@ -80,14 +87,15 @@ site/
 - 约 10 处零散部件被分给了相邻的字，另有 5 个字旁边混进了小的校勘点，清单见 `v2/README.md`「已知限制」。
 - 不入库的字：p05 令、芝（原帖磨损），p12 九、p14 章、p16 嫌（图上没找到）。
 - 扫描源的字图约 70 像素高，极浅的笔画还收不全；换更高分辨率的扫描源后，重跑流水线即可。
-- `build_site.py` 和网站页面目前只支持一部作品。
+- 九成宫：48 个被补纸、朱印遮挡或残损的字不入库（清单在 `v2/books/jcg/book.json` 的 `drop`）。
 
 ## 接入新字帖
 
-1. 找高分辨率的扫描源。
-2. 先做好释文：找到通行释文，再对照原图改成按列、照帖上原貌的转录。
-3. 跑 `run_pages.sh`，看 `glyph/pNN/index.html`；有问题就修正释文或补人工框，然后重跑。
-4. 草书需要更多人工；碑帖拓本是黑底白字，要先反色。
+1. 建 `v2/books/<帖>/book.json`（参照 `jcg`），拓本加 `"rubbing": true` 和缩放比例 `scale`（让字高约 100px）。
+2. `prep_pages.py` 准备页面图。
+3. 释文：字距规整的楷书/碑帖，把通行释文放进 `baseline.txt`，跑 `seed_text.py` 自动分到逐页逐列，再对图核对；行书字距不匀，要人工按列转录。
+4. `run_pages.sh` 跑全流程，看 `glyph/pNN/index.html`，把认不出的残字写进 `drop`，然后 `build_site.py`。
+5. 草书需要更多人工。
 
 ## 许可
 

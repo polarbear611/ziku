@@ -126,7 +126,7 @@ def align_column(img, b, x0, x1, seq):
     return items, junk
 
 def run(pid):
-    img = cv2.imread(f'{align.WORK}/pages/{pid}.png')
+    img = cv2.imread(f'{align.PAGES}/{pid}.png')
     b = align.binarize(img)
     texts = align.column_texts(pid)
     cols = align.find_columns(b, len(texts))
