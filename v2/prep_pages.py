@@ -56,10 +56,13 @@ def main():
     os.makedirs(align.PAGES, exist_ok=True)
     for n in range(a, b + 1):
         img = load(src, n)
-        for x0, y0, x1, y1 in align.CONF.get('mask', {}).get(f'p{n:02d}', []):   # 不收的题签、残印、水印：涂成底色
-            img[y0:y1, x0:x1] = 0 if align.CONF.get('rubbing') else 255
+        fill = 0 if align.CONF.get('rubbing') else np.median(img.reshape(-1, 3), 0)   # 墨迹本涂纸色：涂白会在边上二值化出假墨
+        for x0, y0, x1, y1 in align.CONF.get('mask', {}).get(f'p{n:02d}', []):   # 不收的题签、残印、水印、邻图半列
+            img[y0:y1, x0:x1] = fill
         if align.CONF.get('rubbing'):
             img = rubbing(img, align.CONF.get('scale', 1.0))
+        elif align.CONF.get('scale', 1.0) != 1.0:                                 # 墨迹本只缩放（列距约 200px）
+            img = cv2.resize(img, None, fx=align.CONF['scale'], fy=align.CONF['scale'], interpolation=cv2.INTER_CUBIC)
         cv2.imwrite(f'{align.PAGES}/p{n:02d}.png', img)
     print(f'{b - a + 1} 页 -> {align.PAGES}')
 

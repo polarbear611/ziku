@@ -137,7 +137,7 @@ def run(pid):
     dark = bg - gray
     b = align.binarize(img)
     weak = ((dark > WEAK) & ~cv2.dilate(align.red_mask(img), np.ones((3, 3), np.uint8)).astype(bool)).astype(np.uint8)
-    for k in ((120, 1), (1, 120)):                       # 弱墨里同样去掉框线
+    for k in ((align.LINEL, 1), (1, align.LINEL)):       # 弱墨里同样去掉框线
         ln = cv2.morphologyEx(weak, cv2.MORPH_OPEN, cv2.getStructuringElement(cv2.MORPH_RECT, k))
         weak[cv2.dilate(ln, np.ones((5, 5), np.uint8)) > 0] = 0
     wn, wlab = cv2.connectedComponents(weak, connectivity=8)

@@ -14,7 +14,7 @@
 ```bash
 cd v2
 export ZIKU_BOOK=jcg
-venv/bin/python prep_pages.py ../九成宫醴泉铭-欧阳询 1 48   # 去朱印、补纸 -> 反色 -> 拉伸去石纹 -> 缩放
+venv/bin/python prep_pages.py ../原贴/九成宫醴泉铭-欧阳询 1 48   # 去朱印、补纸 -> 反色 -> 拉伸去石纹 -> 缩放
 venv/bin/python seed_text.py 1 48                          # 释文初稿（会覆盖 text/，人工改过的先备份）
 ./run_pages.sh p01 p02 …                                    # 对齐 -> 抠图 -> 矢量
 ```

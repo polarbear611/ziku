@@ -22,6 +22,7 @@ else:
     PAGES, TEXT, TOKENS = f'{BOOKDIR}/pages', f'{BOOKDIR}/text', None
     OUT3, GL = f'{BOOKDIR}/out3', f'{BOOKDIR}/glyph'
 FONT = os.environ.get('ZIKU_FONT', '/System/Library/Fonts/Supplemental/Songti.ttc')   # 宋体，用于估字高；非 macOS 用环境变量指定
+LINEL = CONF.get('frame_line', 120)   # 长于此（像素）的横竖直线当框线删掉；字放大后长竖笔会超过 120，这类帖要调大
 STEP = 3
 
 # ---------- 文字 ----------
@@ -61,7 +62,9 @@ def glyph_ratio(ch):
 
 # ---------- 图像 ----------
 def red_mask(img):
-    """朱印、红栏"""
+    """朱印、红栏。book.json 里 "red": false 关掉（褪色印与黄纸同色相时会把整页墨迹当成印抹掉，印改用 prep 的 mask 涂）"""
+    if CONF.get('red', True) is False:
+        return np.zeros(img.shape[:2], np.uint8)
     hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
     red = cv2.inRange(hsv, (0, 50, 40), (14, 255, 255)) | cv2.inRange(hsv, (165, 50, 40), (180, 255, 255))
     return cv2.dilate(red, np.ones((5, 5), np.uint8))
@@ -80,7 +83,7 @@ def binarize(img):
     keep[1:] = st[1:, cv2.CC_STAT_AREA] >= 25
     b = keep[lab].astype(np.uint8)
     # 去外框线：贴边长线
-    for k, ax in (((120, 1), 1), ((1, 120), 0)):
+    for k, ax in (((LINEL, 1), 1), ((1, LINEL), 0)):
         ln = cv2.morphologyEx(b, cv2.MORPH_OPEN, cv2.getStructuringElement(cv2.MORPH_RECT, k))
         b[cv2.dilate(ln, np.ones((5, 5), np.uint8)) > 0] = 0
     return b

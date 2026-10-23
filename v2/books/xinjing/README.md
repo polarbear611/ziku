@@ -12,7 +12,7 @@
 ```bash
 cd v2
 export ZIKU_BOOK=xinjing
-venv/bin/python prep_pages.py ../心经-欧阳询/<长图>.jpg 1 4   # 按 crops 裁段 -> mask -> 去印、反色、放大 1.9 倍
+venv/bin/python prep_pages.py ../原贴/心经-欧阳询/<长图>.jpg 1 4   # 按 crops 裁段 -> mask -> 去印、反色、放大 1.9 倍
 ./run_pages.sh p01 p02 p03 p04
 ```
 
