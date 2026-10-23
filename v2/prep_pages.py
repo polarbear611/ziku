@@ -8,6 +8,7 @@ import glob, os, sys
 import cv2
 import numpy as np
 import pymupdf
+from scipy.signal import find_peaks
 from PIL import Image
 import align
 
@@ -18,7 +19,8 @@ def load(src, n):
         return cv2.cvtColor(np.array(Image.open(src).convert('RGB')), cv2.COLOR_RGB2BGR)[y0:y1, x0:x1].copy()
     if os.path.isdir(src):
         fs = sorted(f for f in glob.glob(f'{src}/*') if f.lower().endswith(('.webp', '.png', '.jpg', '.jpeg', '.tif', '.tiff')))
-        return cv2.cvtColor(np.array(Image.open(fs[n - 1]).convert('RGB')), cv2.COLOR_RGB2BGR)
+        k = align.CONF.get('order', list(range(1, len(fs) + 1)))[n - 1]   # 源图顺序与文序不同时，book.json 用 order 给出第 N 页取第几张
+        return cv2.cvtColor(np.array(Image.open(fs[k - 1]).convert('RGB')), cv2.COLOR_RGB2BGR)
     page = pymupdf.open(src)[n - 1]
     z = 2000 / page.rect.width
     pix = page.get_pixmap(matrix=pymupdf.Matrix(z, z))
@@ -50,6 +52,45 @@ def rubbing(img, scale):
     inv = cv2.copyMakeBorder(inv, 24, 24, 24, 24, cv2.BORDER_CONSTANT, value=255)   # 白边：墨迹不贴页边
     return cv2.cvtColor(inv, cv2.COLOR_GRAY2BGR)
 
+def unrule(img):
+    """墨迹本的细界栏（常为虚线、略斜）：细墨（横向宽 ≤6px）按 x 投影找线位，窄带内拟合直线，
+    只涂掉线上的细墨，粗笔画不动。横线转置后同样处理。book.json 里 "rules": true 启用"""
+    out = img.copy()
+    paper = np.median(img.reshape(-1, 3), 0)
+    for t in (False, True):
+        im = out.transpose(1, 0, 2) if t else out
+        g = cv2.cvtColor(np.ascontiguousarray(im), cv2.COLOR_BGR2GRAY).astype(np.float32)
+        d = ((cv2.medianBlur(g.astype(np.uint8), 61).astype(np.float32) - g) > 20).astype(np.uint8)
+        thin = d & (1 - cv2.morphologyEx(d, cv2.MORPH_OPEN, np.ones((1, 7), np.uint8)))
+        H, W = d.shape
+        pk, _ = find_peaks(np.convolve(thin.sum(0).astype(float), np.ones(5) / 5, 'same'), height=H * 0.04, distance=60)
+        kill = np.zeros_like(d)
+        ys = np.arange(H)
+        for x in pk:
+            y0, x0 = np.where(thin[:, max(0, x - 25):x + 26])
+            if len(y0) < H * 0.05:
+                continue
+            a, b = np.polyfit(y0, x0 + max(0, x - 25), 1)              # 粗拟合（线可能斜出 ±20px）
+            for _ in range(2):                                          # 沿拟合线 ±6px 重新拟合
+                xs_ = np.nonzero(thin)[1]; ys_ = np.nonzero(thin)[0]
+                near = np.abs(xs_ - (a * ys_ + b)) <= 6
+                if near.sum() < H * 0.05:
+                    break
+                a, b = np.polyfit(ys_[near], xs_[near], 1)
+            xc = a * ys + b
+            ty, tx = np.nonzero(thin)
+            for y in range(0, H, 300):                                  # 线会弯：每 300 行在全局线 ±10px 内再拟一段
+                sel = (ty >= y) & (ty < y + 300) & (np.abs(tx - (a * ty + b)) <= 10)
+                if sel.sum() >= 60:
+                    a2, b2 = np.polyfit(ty[sel], tx[sel], 1)
+                    xc[y:y + 300] = a2 * ys[y:y + 300] + b2
+            xc = xc.round().astype(int)
+            for dx in range(-4, 5):
+                kill[ys, np.clip(xc + dx, 0, W - 1)] = 1
+        kill &= d & (1 - cv2.morphologyEx(d, cv2.MORPH_OPEN, np.ones((1, 10), np.uint8)))
+        im[kill > 0] = paper
+    return out
+
 def main():
     src = sys.argv[1]
     a, b = (int(sys.argv[2]), int(sys.argv[3])) if len(sys.argv) > 3 else (1, 18)
@@ -61,8 +102,17 @@ def main():
             img[y0:y1, x0:x1] = fill
         if align.CONF.get('rubbing'):
             img = rubbing(img, align.CONF.get('scale', 1.0))
-        elif align.CONF.get('scale', 1.0) != 1.0:                                 # 墨迹本只缩放（列距约 200px）
-            img = cv2.resize(img, None, fx=align.CONF['scale'], fy=align.CONF['scale'], interpolation=cv2.INTER_CUBIC)
+        else:
+            if align.CONF.get('scale', 1.0) != 1.0:                               # 墨迹本只缩放（列距约 200px）
+                img = cv2.resize(img, None, fx=align.CONF['scale'], fy=align.CONF['scale'], interpolation=cv2.INTER_CUBIC)
+            if isinstance(align.CONF.get('red'), dict):                          # 印章按外接矩形涂纸色（印边、印文都不留）
+                n_, _, st, _ = cv2.connectedComponentsWithStats(cv2.morphologyEx(align.red_mask(img), cv2.MORPH_CLOSE, np.ones((25, 25), np.uint8)), 8)
+                paper = np.median(img.reshape(-1, 3), 0)
+                for X, Y, W, H, A in st[1:]:
+                    if A >= 400:
+                        img[max(0, Y - 6):Y + H + 6, max(0, X - 6):X + W + 6] = paper
+            if align.CONF.get('rules'):
+                img = unrule(img)
         cv2.imwrite(f'{align.PAGES}/p{n:02d}.png', img)
     print(f'{b - a + 1} 页 -> {align.PAGES}')
 

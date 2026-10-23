@@ -63,10 +63,13 @@ def glyph_ratio(ch):
 # ---------- 图像 ----------
 def red_mask(img):
     """朱印、红栏。book.json 里 "red": false 关掉（褪色印与黄纸同色相时会把整页墨迹当成印抹掉，印改用 prep 的 mask 涂）"""
-    if CONF.get('red', True) is False:
+    rc = CONF.get('red', True)
+    if rc is False:
         return np.zeros(img.shape[:2], np.uint8)
+    lo, hi, sm, vm = (rc['h'], 180 - rc['h'], rc['s'], rc['v']) if isinstance(rc, dict) else (14, 165, 50, 40)
+    # 纸偏红的帖收紧，如 {"h":10,"s":120,"v":100}：色相 0–10 / 170–180，饱和度、亮度下限提高
     hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
-    red = cv2.inRange(hsv, (0, 50, 40), (14, 255, 255)) | cv2.inRange(hsv, (165, 50, 40), (180, 255, 255))
+    red = cv2.inRange(hsv, (0, sm, vm), (lo, 255, 255)) | cv2.inRange(hsv, (hi, sm, vm), (180, 255, 255))
     return cv2.dilate(red, np.ones((5, 5), np.uint8))
 
 def binarize(img):
