@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>书法字库 · 姜夔《跋王献之保母帖》</title>
+<style>
+  :root {
+    --paper: #f5efe0; --paper2: #ece3cd; --ink: #3a3128; --ink2: #7a6d5a;
+    --accent: #a53f2b; --line: #d8c9a5; --ok: #2e7d32;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: var(--paper); color: var(--ink);
+         font-family: "Songti SC", "STSong", "Kaiti SC", serif; min-height: 100vh; }
+  header { padding: 14px 24px 10px; border-bottom: 2px solid var(--line); background: var(--paper2); }
+  header h1 { font-size: 22px; letter-spacing: 2px; }
+  header .sub { font-size: 12px; color: var(--ink2); margin-top: 3px; }
+  nav { display: flex; gap: 6px; margin-top: 10px; }
+  nav button {
+    font-family: inherit; font-size: 15px; padding: 7px 20px; cursor: pointer;
+    border: 1px solid var(--line); background: transparent; color: var(--ink2); border-radius: 4px 4px 0 0;
+  }
+  nav button.on { background: #fff; color: var(--accent); font-weight: 700; border-bottom-color: #fff; }
+  main { padding: 18px 24px 60px; }
+  .bar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 14px;
+         font-size: 14px; }
+  .bar select, .bar input[type=text] {
+    font-family: inherit; font-size: 14px; padding: 6px 10px;
+    border: 1px solid var(--line); border-radius: 4px; background: #fff;
+  }
+  .bar input[type=text] { width: 280px; }
+  .btn { font-family: inherit; font-size: 14px; padding: 6px 16px; cursor: pointer;
+         background: var(--accent); color: #fff; border: 0; border-radius: 4px; }
+  .btn.ghost { background: #fff; color: var(--ink); border: 1px solid var(--line); }
+  .hint { font-size: 12px; color: var(--ink2); }
+  .grid { display: flex; flex-wrap: wrap; gap: 10px; }
+  .cell { width: 108px; background: #fff; border: 1px solid var(--line); border-radius: 4px;
+          padding: 4px; text-align: center; cursor: pointer; }
+  .cell img { width: 100px; height: 100px; object-fit: contain; display: block; }
+  .cell .cap { font-size: 12px; color: var(--ink2); line-height: 1.5; }
+  .cell .cap b { color: var(--ink); font-size: 15px; }
+  .qchar { margin: 10px 14px 10px 0; display: inline-block; vertical-align: top; text-align: center; }
+  .qchar .ch { font-size: 26px; margin-bottom: 4px; }
+  .qchar .miss { width: 100px; height: 100px; border: 1px dashed #c66; color: #c66;
+                 display: flex; align-items: center; justify-content: center; font-size: 12px; }
+  .variants img { width: 92px; height: 92px; border: 1px solid var(--line); margin: 2px;
+                  background: #fff; cursor: zoom-in; }
+  /* 字帖 */
+  #copyArea { display: flex; flex-wrap: wrap; gap: 0; background: #fff; padding: 14px;
+              border: 1px solid var(--line); width: fit-content; }
+  .mig { width: var(--gsz); height: var(--gsz); position: relative; margin: 2px; }
+  .mig .frame { position: absolute; inset: 0; border: 1px solid #d66; pointer-events: none; }
+  .mig .frame::before { content: ""; position: absolute; left: 50%; top: 0; bottom: 0;
+        border-left: 1px dashed #e9a0a0; }
+  .mig .frame::after { content: ""; position: absolute; top: 50%; left: 0; right: 0;
+        border-top: 1px dashed #e9a0a0; }
+  .mig .d1 { position: absolute; inset: 0; pointer-events: none;
+        background: linear-gradient(to top right, transparent calc(50% - .5px), #eec2c2 calc(50% - .5px), #eec2c2 calc(50% + .5px), transparent calc(50% + .5px)); }
+  .mig .d2 { position: absolute; inset: 0; pointer-events: none;
+        background: linear-gradient(to bottom right, transparent calc(50% - .5px), #eec2c2 calc(50% - .5px), #eec2c2 calc(50% + .5px), transparent calc(50% + .5px)); }
+  .mig img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
+  .mig .miss { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+        color: #c66; font-size: 11px; }
+  #modal { position: fixed; inset: 0; background: rgba(40,30,10,.72); display: none;
+           align-items: center; justify-content: center; z-index: 50; flex-direction: column; }
+  #modal.show { display: flex; }
+  #modal img { max-width: 60vmin; max-height: 60vmin; background: #fff; border-radius: 6px; }
+  #modal .meta { color: #f0e8d0; margin-top: 12px; font-size: 15px; }
+  .missList { font-size: 13px; color: #b33; margin-top: 10px; }
+  @media print {
+    header, nav, .bar, .hint, #modal, .missList { display: none !important; }
+    main { padding: 0; }
+    #copyArea { border: 0; width: 100%; }
+    body { background: #fff; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>書法字庫</h1>
+  <div class="sub" id="sub">姜夔《跋王獻之保母帖》· 南宋 · 故宮博物院藏本</div>
+  <nav>
+    <button data-v="browse" class="on">全部瀏覽</button>
+    <button data-v="query">按字查詢</button>
+    <button data-v="copy">生成字帖</button>
+  </nav>
+</header>
+
+<main>
+  <!-- 浏览 -->
+  <section id="v-browse">
+    <div class="bar">
+      <select id="bWork"></select>
+      <span class="hint" id="bInfo"></span>
+    </div>
+    <div class="grid" id="bGrid"></div>
+  </section>
+
+  <!-- 查询 -->
+  <section id="v-query" style="display:none">
+    <div class="bar">
+      <select id="qWork"></select>
+      <input type="text" id="qInput" placeholder="輸入單字或一段文字（支持簡體）">
+      <button class="btn" onclick="doQuery()">查詢</button>
+      <span class="hint">輸入多字時逐字列出各自的全部字圖</span>
+    </div>
+    <div id="qOut"></div>
+  </section>
+
+  <!-- 字帖 -->
+  <section id="v-copy" style="display:none">
+    <div class="bar" style="align-items:flex-start; flex-direction:column; gap:8px;">
+      <div style="display:flex; gap:10px; width:100%;">
+        <select id="cWork"></select>
+        <button class="btn" onclick="genCopy()">生成臨摹字帖</button>
+        <button class="btn ghost" onclick="window.print()">列印 / 匯出 PDF</button>
+      </div>
+      <textarea id="cText" rows="5" style="width:min(760px,100%); font-family:inherit; font-size:16px;
+        padding:10px; border:1px solid var(--line); border-radius:4px;"
+        placeholder="在此輸入文章，點擊生成。缺字會以紅字標出並列出清單。"></textarea>
+      <div class="bar" style="margin:0;">
+        格式：
+        <label><input type="radio" name="gf" value="mi" checked> 米字格</label>
+        <label><input type="radio" name="gf" value="jiu"> 九宮格</label>
+        <label><input type="radio" name="gf" value="none"> 空格</label>
+        　格徑
+        <input type="range" id="cSize" min="56" max="120" value="84">
+        <span class="hint" id="cStat"></span>
+      </div>
+    </div>
+    <div class="missList" id="cMiss" style="display:none"></div>
+    <div id="copyArea"></div>
+  </section>
+</main>
+
+<div id="modal" onclick="this.classList.remove('show')">
+  <img id="mImg" alt="">
+  <div class="meta" id="mMeta"></div>
+</div>
+
+<script src="/*DBSRC*/"></script>
+<script>
+const DB = window.DB;
+const W = DB.authors[0].works[0];   // 目前單作品
+const BASE = '/*BASE*/';            // 字圖路徑前綴（網站/ 下的拷貝為 ../）
+const ITEM = Object.fromEntries(W.items.map(it => [it.id, it]));
+document.getElementById('sub').textContent += ` · ${W.items.length} 字圖 / ${Object.keys(W.idxT).length} 字`;
+/* 查詢：繁體直接命中；簡體走簡體索引 */
+function lookup(ch) {
+  if (W.idxT[ch] && W.idxT[ch].length) return W.idxT[ch];
+  if (W.idxS[ch] && W.idxS[ch].length) return W.idxS[ch];
+  return null;
+}
+function itemsOf(entries) {
+  return entries.map(e => ITEM[e.id]).filter(Boolean);
+}
+
+/* ---- 導航 ---- */
+document.querySelectorAll('nav button').forEach(b => b.onclick = () => {
+  document.querySelectorAll('nav button').forEach(x => x.classList.remove('on'));
+  b.classList.add('on');
+  for (const v of ['browse','query','copy'])
+    document.getElementById('v-'+v).style.display = (v === b.dataset.v) ? '' : 'none';
+});
+
+/* ---- 下拉 ---- */
+for (const id of ['bWork','qWork','cWork']) {
+  const sel = document.getElementById(id);
+  sel.innerHTML = `<option value="${W.key}">${DB.authors[0].name}（${DB.authors[0].dynasty}）· ${W.title}</option>`;
+}
+
+/* ---- 瀏覽 ---- */
+const PER = 72;
+let bPage = 0;
+function renderBrowse() {
+  const g = document.getElementById('bGrid');
+  const start = bPage * PER;
+  const slice = W.items.slice(start, start + PER);
+  g.innerHTML = slice.map(it =>
+    `<div class="cell" onclick="show('${it.id}','${it.ch}')">
+       <img loading="lazy" src="${BASE + it.f}"><div class="cap"><b>${it.ch}</b> · 第${it.page}頁</div>
+     </div>`).join('');
+  const tp = Math.ceil(W.items.length / PER);
+  document.getElementById('bInfo').innerHTML =
+    `共 ${W.items.length} 張字圖 · 第 ${bPage+1}/${tp} 頁
+     <button class="btn ghost" style="padding:2px 10px" onclick="bPage=Math.max(0,bPage-1);renderBrowse()">‹</button>
+     <button class="btn ghost" style="padding:2px 10px" onclick="bPage=Math.min(${tp-1},bPage+1);renderBrowse()">›</button>`;
+}
+
+/* ---- 放大 ---- */
+function show(id, ch) {
+  const it = ITEM[id];
+  document.getElementById('mImg').src = BASE + it.f;
+  document.getElementById('mMeta').textContent =
+    `${ch} · ${W.title} · 第 ${it.page} 頁 · ${it.id}`;
+  document.getElementById('modal').classList.add('show');
+}
+
+/* ---- 查詢 ---- */
+function doQuery() {
+  const text = document.getElementById('qInput').value.trim();
+  if (!text) return;
+  const out = document.getElementById('qOut');
+  let html = '', miss = [];
+  for (const ch of text) {
+    const entries = lookup(ch);
+    if (!entries) { miss.push(ch); continue; }
+    const its = entries.map(e => ITEM[e.id]).filter(Boolean);
+    html += `<div class="qchar"><div class="ch">${ch}${ch !== its[0]?.ch ? '（帖作 ' + its[0]?.ch + '）' : ''}</div>
+             <div class="variants">${its.map(it =>
+               `<img loading="lazy" src="${BASE + it.f}" title="${it.id} · 第${it.page}頁"
+                  onclick="show('${it.id}','${it.ch}')">`).join('')}</div></div>`;
+  }
+  out.innerHTML = html + (miss.length ? `<p class="missList">字庫未收：${miss.join(' ')}</p>` : '');
+}
+
+/* ---- 字帖生成 ---- */
+function pickImg(ch) {
+  const entries = lookup(ch);
+  if (!entries) return null;
+  const it = ITEM[entries[0].id];
+  return it || null;
+}
+function frameHTML(kind) {
+  if (kind === 'mi') return '<div class="frame"></div><div class="d1"></div><div class="d2"></div>';
+  if (kind === 'jiu') return '<div class="frame"></div><div class="d1"></div><div class="d2"></div><div class="frame" style="inset:25%"></div>';
+  return '';
+}
+function genCopy() {
+  const text = document.getElementById('cText').value.replace(/\s+/g, '');
+  const kind = document.querySelector('input[name=gf]:checked').value;
+  const sz = document.getElementById('cSize').value + 'px';
+  const area = document.getElementById('copyArea');
+  area.style.setProperty('--gsz', sz);
+  let html = '', miss = [];
+  let n = 0;
+  for (const ch of text) {
+    const it = pickImg(ch);
+    if (it) {
+      html += `<div class="mig" style="--gsz:${sz}">${frameHTML(kind)}<img src="${BASE + (it.v || it.f)}"></div>`;
+    } else {
+      html += `<div class="mig" style="--gsz:${sz}">${frameHTML(kind)}<div class="miss">缺</div></div>`;
+      miss.push(ch);
+    }
+    n++;
+  }
+  area.innerHTML = html;
+  document.getElementById('cStat').textContent = `共 ${n} 格`;
+  const ml = document.getElementById('cMiss');
+  if (miss.length) { ml.style.display = ''; ml.textContent = '字庫未收（以空格呈現）：' + [...new Set(miss)].join(' '); }
+  else ml.style.display = 'none';
+}
+document.getElementById('cSize').oninput = genCopy;
+
+/* init */
+renderBrowse();
+</script>
+</body>
+</html>

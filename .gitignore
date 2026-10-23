@@ -1,0 +1,20 @@
+# 白名单：只发布代码、释文和文档。扫描图、字图、虚拟环境、v1 代码与内部文档留在本地
+/*
+!/.gitignore
+!/README.md
+!/LICENSE
+
+!/v2/
+!/work/
+/work/*
+!/work/tokens/
+
+/v2/venv/
+/v2/out/
+/v2/out3/
+/v2/glyph/
+/v2/site/
+/v2/review/
+__pycache__/
+.DS_Store
+._*

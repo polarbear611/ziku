@@ -1,0 +1,8 @@
+numpy
+scipy
+opencv-python-headless
+rapidocr-onnxruntime
+opencc-python-reimplemented
+pillow
+potracer
+pymupdf

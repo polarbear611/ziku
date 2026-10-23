@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>单字成品图预览</title>
+<style>
+:root{--bg:#f6f3ec;--paper:#fffdf7;--grid:#d9534f;--fg:#222;--mut:#888}
+body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.5 -apple-system,"PingFang SC",sans-serif}
+header{position:sticky;top:0;background:var(--bg);padding:10px 16px;border-bottom:1px solid #ddd;display:flex;gap:14px;align-items:center;flex-wrap:wrap;z-index:2}
+header b{font-size:16px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(var(--sz),1fr));gap:12px;padding:14px 16px}
+.c{text-align:center}
+.cell{position:relative;width:100%;aspect-ratio:1;background:var(--paper)}
+.cell svg.mi,.cell img,.cell svg.g{position:absolute;inset:0;width:100%;height:100%}
+.cell img.src{object-fit:cover}
+.lab{font-size:12px;color:var(--mut)}
+.lab b{font-size:15px;color:var(--fg);font-family:"Kaiti SC","STKaiti",serif}
+.lab .w{color:#c62828}
+</style>
+</head>
+<body>
+<header>
+  <b>/*PID*/ 单字成品图</b><span id="cnt"></span>
+  <label>显示 <select id="mode"><option value="svg">矢量 SVG</option><option value="png">透明位图 PNG</option><option value="src">原图（同一字身框）</option></select></label>
+  <label><input type="checkbox" id="mi" checked> 米字格</label>
+  <label>大小 <input type="range" id="sz" min="70" max="240" value="120"></label>
+</header>
+<div class="grid" id="g"></div>
+<script>
+const PID = '/*PID*/', N = /*N*/0, ROWS = /*DATA*/[];
+const MI = `<svg class="mi" viewBox="0 0 100 100" preserveAspectRatio="none"><g fill="none" stroke="#d9534f" stroke-width=".6">
+<rect x=".5" y=".5" width="99" height="99" stroke-width="1.2"/></g><g stroke="#d9534f" stroke-width=".4" stroke-dasharray="2 2" opacity=".7">
+<line x1="50" y1="0" x2="50" y2="100"/><line x1="0" y1="50" x2="100" y2="50"/><line x1="0" y1="0" x2="100" y2="100"/><line x1="100" y1="0" x2="0" y2="100"/></g></svg>`;
+const pad = i => String(i).padStart(3, '0');
+function render() {
+  const mode = document.getElementById('mode').value, mi = document.getElementById('mi').checked;
+  document.documentElement.style.setProperty('--sz', document.getElementById('sz').value + 'px');
+  const g = document.getElementById('g'); g.innerHTML = '';
+  document.getElementById('cnt').textContent = `${ROWS.length} 字`;
+  for (const r of ROWS) {
+    const glyph = mode === 'svg' ? `<svg class="g" viewBox="0 0 ${N} ${N}"><path fill="#111" fill-rule="evenodd" d="${r.d}"/></svg>`
+      : mode === 'png' ? `<img loading="lazy" src="${pad(r.idx)}.png">` : `<img class="src" loading="lazy" src="${pad(r.idx)}_src.jpg">`;
+    const d = document.createElement('div'); d.className = 'c';
+    d.innerHTML = `<div class="cell">${mi && mode !== 'src' ? MI : ''}${glyph}</div>
+      <div class="lab"><b>${r.char}</b> ${r.idx}${r.note ? ' 注' : ''}${r.shrink < 1 ? ` <span class="w">缩${r.shrink}</span>` : ''}</div>`;
+    g.appendChild(d);
+  }
+}
+['mode', 'mi', 'sz'].forEach(id => document.getElementById(id).oninput = render);
+render();
+</script>
+</body>
+</html>
