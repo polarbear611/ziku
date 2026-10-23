@@ -62,7 +62,8 @@ def unrule(img):
         im = out.transpose(1, 0, 2) if t else out
         g = cv2.cvtColor(np.ascontiguousarray(im), cv2.COLOR_BGR2GRAY).astype(np.float32)
         d = ((cv2.medianBlur(g.astype(np.uint8), 61).astype(np.float32) - g) > 20).astype(np.uint8)
-        thin = d & (1 - cv2.morphologyEx(d, cv2.MORPH_OPEN, np.ones((1, 7), np.uint8)))
+        w1, w2, hw = align.CONF.get('rule_w', [7, 10, 4])              # 细墨宽度上限（找线用 / 涂线用）、沿线涂抹半宽；放大后线粗的帖调大
+        thin = d & (1 - cv2.morphologyEx(d, cv2.MORPH_OPEN, np.ones((1, w1), np.uint8)))
         H, W = d.shape
         pk, _ = find_peaks(np.convolve(thin.sum(0).astype(float), np.ones(5) / 5, 'same'), height=H * 0.04, distance=60)
         kill = np.zeros_like(d)
@@ -86,10 +87,13 @@ def unrule(img):
                     a2, b2 = np.polyfit(ty[sel], tx[sel], 1)
                     xc[y:y + 300] = a2 * ys[y:y + 300] + b2
             xc = xc.round().astype(int)
-            for dx in range(-4, 5):
+            for dx in range(-hw, hw + 1):
                 kill[ys, np.clip(xc + dx, 0, W - 1)] = 1
-        kill &= d & (1 - cv2.morphologyEx(d, cv2.MORPH_OPEN, np.ones((1, 10), np.uint8)))
-        im[kill > 0] = paper
+        kill &= d & (1 - cv2.morphologyEx(d, cv2.MORPH_OPEN, np.ones((1, w2), np.uint8)))
+        if align.CONF.get('rule_fill') == 'local':                    # 纸色不匀（半页白、半页泛红）时按邻近纸色涂，全页中位数会涂出深色条
+            im[kill > 0] = cv2.medianBlur(np.ascontiguousarray(im), 61)[kill > 0]
+        else:
+            im[kill > 0] = paper
     return out
 
 def main():
@@ -106,15 +110,18 @@ def main():
             if align.CONF.get('rules'):                                           # 带界格的拓本（反色后同墨迹本）
                 img = unrule(img)
         else:
-            if align.CONF.get('scale', 1.0) != 1.0:                               # 墨迹本只缩放（列距约 200px）
+            early = align.CONF.get('rules') and align.CONF.get('rules_before_scale')   # 原图界栏只有 1–2px：先去线再放大，放大后线变粗会和笔画混在一起
+            if early:
+                img = unrule(img)
+            if align.CONF.get('scale', 1.0) != 1.0:                             # 墨迹本只缩放（列距约 200px）
                 img = cv2.resize(img, None, fx=align.CONF['scale'], fy=align.CONF['scale'], interpolation=cv2.INTER_CUBIC)
-            if isinstance(align.CONF.get('red'), dict):                          # 印章按外接矩形涂纸色（印边、印文都不留）
+            if isinstance(align.CONF.get('red'), dict) and align.CONF.get('seal_box', True):   # 印章按外接矩形涂纸色（印边、印文都不留）；纸上霉点多的帖设 seal_box: false，只靠二值化时按像素剔印色
                 n_, _, st, _ = cv2.connectedComponentsWithStats(cv2.morphologyEx(align.red_mask(img), cv2.MORPH_CLOSE, np.ones((25, 25), np.uint8)), 8)
                 paper = np.median(img.reshape(-1, 3), 0)
                 for X, Y, W, H, A in st[1:]:
                     if A >= 400:
                         img[max(0, Y - 6):Y + H + 6, max(0, X - 6):X + W + 6] = paper
-            if align.CONF.get('rules'):
+            if align.CONF.get('rules') and not early:
                 img = unrule(img)
         cv2.imwrite(f'{align.PAGES}/p{n:02d}.png', img)
     print(f'{b - a + 1} 页 -> {align.PAGES}')

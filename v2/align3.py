@@ -63,7 +63,7 @@ def prepare(img, b, x0, x1, seq_hint):
             segs[(i, j)] = (len(crops) - 1, (int(cx0), int(t0), int(cx1), int(t1)), g)
     P = O.probs(crops)
     return {'C': C, 'M': M, 's': s, 'segs': segs, 'P': P,
-            'cutc': ps[C] / rowink * 1.5,
+            'cutc': ps[np.minimum(C, len(ps) - 1)] / rowink * 1.5,   # 墨迹贴页底时切点可落在 H 上
             'head': 3.0 * (cp[C] - cp[Y0]) / (rowink * 20),
             'tail': 3.0 * (cp[Y1] - cp[C]) / (rowink * 20)}
 
