@@ -71,6 +71,35 @@
   #modal img { max-width: 60vmin; max-height: 60vmin; background: #fff; border-radius: 6px; }
   #modal .meta { color: #f0e8d0; margin-top: 12px; font-size: 15px; }
   .missList { font-size: 13px; color: #b33; margin-top: 10px; }
+  /* 字帖工具列 */
+  .copybar { flex-direction: column; align-items: stretch; gap: 8px; max-width: 760px; }
+  .copybar .row { display: flex; gap: 10px; flex-wrap: wrap; }
+  .copybar .sels select { flex: 1 1 220px; min-width: 0; }
+  #cText { width: 100%; font-family: inherit; font-size: 16px; padding: 10px;
+           border: 1px solid var(--line); border-radius: 4px; }
+  .opts label { white-space: nowrap; }
+  .size { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+  /* 手機：全寬、無橫向捲動、字圖格按螢幕寬排 */
+  html { -webkit-text-size-adjust: 100%; }
+  img { max-width: 100%; }
+  @media (max-width: 640px) {
+    header { padding: 12px 16px 0; }
+    header h1 { font-size: 20px; }
+    nav button { flex: 1; padding: 8px 0; font-size: 15px; }
+    main { padding: 12px 16px 48px; }
+    .bar { gap: 8px; }
+    .bar select, .bar input[type=text] { width: 100%; font-size: 16px; padding: 8px 10px; }
+    .bar .btn { flex: 1; padding: 9px 8px; }
+    .copybar .sels select { flex-basis: 100%; }
+    .grid { gap: 8px; display: grid; grid-template-columns: repeat(3, 1fr); }
+    .cell { width: auto; }
+    .cell img { width: 100%; height: auto; aspect-ratio: 1; }
+    .variants img { width: 72px; height: 72px; }
+    .qchar { margin-right: 8px; }
+    #copyArea { width: 100%; padding: 8px; }
+    .hint { width: 100%; }
+    .opts .hint { width: auto; }
+  }
   @media print {
     header, nav, .bar, .hint, #modal, .missList { display: none !important; }
     main { padding: 0; }
@@ -113,24 +142,24 @@
 
   <!-- 字帖 -->
   <section id="v-copy" style="display:none">
-    <div class="bar" style="align-items:flex-start; flex-direction:column; gap:8px;">
-      <div style="display:flex; gap:10px; width:100%;">
+    <div class="bar copybar">
+      <div class="row sels">
         <select id="cWork"></select>
         <select id="cScope" title="集字範圍"></select>
+      </div>
+      <textarea id="cText" rows="4"
+        placeholder="在此輸入文章，點擊生成。缺字會以紅字標出並列出清單。"></textarea>
+      <div class="row btns">
         <button class="btn" onclick="genCopy()">生成臨摹字帖</button>
         <button class="btn ghost" onclick="genCopy(true)" title="每個字重新隨機挑一張">換一批</button>
-        <button class="btn ghost" onclick="window.print()">列印 / 匯出 PDF</button>
+        <button class="btn ghost" onclick="window.print()">列印 / PDF</button>
       </div>
-      <textarea id="cText" rows="5" style="width:min(760px,100%); font-family:inherit; font-size:16px;
-        padding:10px; border:1px solid var(--line); border-radius:4px;"
-        placeholder="在此輸入文章，點擊生成。缺字會以紅字標出並列出清單。"></textarea>
-      <div class="bar" style="margin:0;">
+      <div class="bar opts" style="margin:0;">
         格式：
         <label><input type="radio" name="gf" value="mi" checked> 米字格</label>
         <label><input type="radio" name="gf" value="jiu"> 九宮格</label>
         <label><input type="radio" name="gf" value="none"> 空格</label>
-        　格徑
-        <input type="range" id="cSize" min="56" max="120" value="84">
+        <span class="size">格徑 <input type="range" id="cSize" min="40" max="120" value="84"></span>
         <span class="hint" id="cStat"></span>
         <span class="hint">（點擊單格可換該字的另一張）</span>
       </div>
@@ -320,6 +349,11 @@ function renderCopy() {
 document.getElementById('cSize').oninput = renderCopy;
 document.querySelectorAll('input[name=gf]').forEach(r => r.onchange = renderCopy);
 
+/* init：手機上把格徑設成一行放得下 4 格 */
+if (innerWidth < 640) {
+  const fit = Math.floor((innerWidth - 32 - 18) / 4) - 4;
+  document.getElementById('cSize').value = Math.max(40, Math.min(84, fit));
+}
 /* init */
 useWork(WORKS[0].key);
 renderBrowse();
