@@ -1,0 +1,23 @@
+{
+ "key": "jab",
+ "pages": 20,
+ "text_chars": 1961,
+ "glyphs": 1941,
+ "missing": 16,
+ "auto_drop": 237,
+ "failed_pages": [],
+ "seed": "字格 1818，释文 1961 字：对上 1733，废格 85，缺字 228；写出 20 页 -> /Users/huangqin/zcodeProjects/字帖/v2/books/jab/text",
+ "measure": {
+  "median_gray": 195.0,
+  "warm_ink": 0.25436631578947366
+ },
+ "scale": 1.43,
+ "rubbing": false,
+ "red": {
+  "h": 14,
+  "s": 80,
+  "v": 150
+ },
+ "seed_match": 0.884,
+ "status": "review"
+}

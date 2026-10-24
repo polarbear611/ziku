@@ -1,0 +1,19 @@
+{
+ "key": "ytz",
+ "pages": 76,
+ "text_chars": 1461,
+ "glyphs": 1460,
+ "missing": 0,
+ "auto_drop": 12,
+ "failed_pages": [],
+ "seed": "字格 1477，释文 1461 字：对上 1444，废格 33，缺字 17；写出 76 页 -> /Users/huangqin/zcodeProjects/字帖/v2/books/ytz/text",
+ "measure": {
+  "median_gray": 35.0,
+  "warm_ink": 0.015164279696714406
+ },
+ "scale": 1.11,
+ "rubbing": true,
+ "red": "default",
+ "seed_match": 0.988,
+ "status": "review"
+}

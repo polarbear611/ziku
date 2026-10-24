@@ -1,0 +1,23 @@
+{
+ "key": "ddj",
+ "pages": 39,
+ "text_chars": 5328,
+ "glyphs": 5261,
+ "missing": 54,
+ "auto_drop": 132,
+ "failed_pages": [],
+ "seed": "字格 5533，释文 5328 字：对上 5081，废格 452，缺字 247；写出 39 页 -> /Users/huangqin/zcodeProjects/字帖/v2/books/ddj/text",
+ "measure": {
+  "median_gray": 168.0,
+  "warm_ink": 0.03727981948258672
+ },
+ "scale": 1.51,
+ "rubbing": false,
+ "red": {
+  "h": 14,
+  "s": 80,
+  "v": 150
+ },
+ "seed_match": 0.954,
+ "status": "review"
+}

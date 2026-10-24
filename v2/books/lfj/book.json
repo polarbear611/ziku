@@ -1,0 +1,33 @@
+{
+ "key": "zhongshaojing-lingfeijing",
+ "dir": "钟绍京-灵飞经",
+ "author": "钟绍京",
+ "author_en": "Zhong Shaojing",
+ "dynasty": "唐",
+ "title": "灵飞经",
+ "script": "楷书",
+ "source": "墨迹（传钟绍京书，网络图片 9 页）",
+ "scale": 1.0,
+ "red": {
+  "h": 14,
+  "s": 80,
+  "v": 150
+ },
+ "seal_box": false,
+ "skip": [],
+ "alias": {},
+ "drop": [
+  [
+   "p01",
+   8
+  ],
+  [
+   "p08",
+   34
+  ],
+  [
+   "p08",
+   35
+  ]
+ ]
+}
