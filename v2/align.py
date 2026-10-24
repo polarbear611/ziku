@@ -101,6 +101,8 @@ def find_columns(b, n):
     H, W = b.shape
     prof = smooth(b.sum(0).astype(float), 31)
     pk, pr = find_peaks(prof, distance=100, prominence=prof.max() * 0.05)
+    if len(pk) < n:                       # 短列（只有两三字）或列距窄的页：放宽再找一次，原本找得到的页不受影响
+        pk, pr = find_peaks(prof, distance=60, prominence=prof.max() * 0.01)
     if len(pk) < n:
         raise RuntimeError(f'列峰 {len(pk)} < {n}')
     pk = np.sort(pk[np.argsort(pr['prominences'])[-n:]])

@@ -15,6 +15,7 @@ EMCAP = 8.0       # 单字识别代价上限：认不出的字也要比「判缺
 UNK = 2.5
 MAXSPAN = 8
 SHIFT = 8
+SKIPBLANK = bool(align.CONF.get("full_extent"))   # 平阙空白：列范围取全墨迹 + 跨空白零代价（默认关，旧帖不受影响）
 import os
 OUT = align.OUT3
 os.makedirs(OUT, exist_ok=True)
@@ -27,6 +28,9 @@ def prepare(img, b, x0, x1, seq_hint):
     H = len(prof)
     Y0 = min(min(t0 for _, _, t0, _ in segs0), segs0[0][0])
     Y1 = max(max(t1 for _, _, _, t1 in segs0) + 1, segs0[-1][1])
+    if align.CONF.get('full_extent'):            # 平阙大空白后的字（抬头、列尾落单）几何 DP 会判到列外：列范围取全部墨迹
+        nz = np.where(prof > 1)[0]
+        if len(nz): Y0, Y1 = min(Y0, int(nz[0])), max(Y1, int(nz[-1]) + 1)
     prof[:Y0] = 0; prof[Y1:] = 0
     ink = prof > 1
     nxt = np.full(H + 1, H, int); prv = np.full(H + 1, -1, int)
@@ -63,6 +67,7 @@ def prepare(img, b, x0, x1, seq_hint):
             segs[(i, j)] = (len(crops) - 1, (int(cx0), int(t0), int(cx1), int(t1)), g)
     P = O.probs(crops)
     return {'C': C, 'M': M, 's': s, 'segs': segs, 'P': P,
+            'inkc': np.concatenate([[0], np.cumsum(ink)])[np.minimum(C, H)],   # 切点处累计墨行数（跨空白判断用，界格细线不算墨）
             'cutc': ps[np.minimum(C, len(ps) - 1)] / rowink * 1.5,   # 墨迹贴页底时切点可落在 H 上
             'head': 3.0 * (cp[C] - cp[Y0]) / (rowink * 20),
             'tail': 3.0 * (cp[Y1] - cp[C]) / (rowink * 20)}
@@ -98,6 +103,12 @@ def col_dp(pr, seq):
                         + 0.6 * min(0.0, np.log((cx1 - cx0) / (s * rw[k - 1]) / 0.8)) ** 2 + cutc[j]
                     if c < D[k, j]:
                         D[k, j] = c; B[(k, j)] = ('char', k - 1, i)
+            if SKIPBLANK:                               # 跨过整段空白（平阙）：不消耗字，零代价
+                i = j - 1
+                while i >= 0 and pr['inkc'][i] == pr['inkc'][j]:
+                    if D[k, i] < D[k, j]:
+                        D[k, j] = D[k, i]; B[(k, j)] = ('skip', k, i)
+                    i -= 1
             for i in range(max(0, j - MAXSPAN), j):     # 废段
                 if D[k, i] >= INF or (i, j) not in segs: continue
                 c = D[k, i] + JUNK + cutc[j]
@@ -117,6 +128,8 @@ def backtrack(pr, seq, tables, k):
             out.append(('char', k - 1, pr['segs'][(i, j)]))
         elif kind == 'junk':
             out.append(('junk', None, pr['segs'][(i, j)]))
+        elif kind == 'skip':
+            pass
         else:
             out.append(('del', k - 1, None))
         k, j = pk, i
