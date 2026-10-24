@@ -1,0 +1,40 @@
+# NAS 上运行：cd /home/op/ziku-admin && docker compose up -d --build
+# web 只绑 127.0.0.1（本机 ssh -L 或第 2 步的反向隧道进来），不对局域网开放
+services:
+  web:
+    build: {context: ., dockerfile: admin/Dockerfile}
+    image: ziku-admin:latest
+    command: ["gunicorn", "-b", "0.0.0.0:8790", "-w", "1", "--threads", "4", "--timeout", "600", "app:app"]
+    ports: ["127.0.0.1:8790:8790"]
+    volumes: ["./data:/data"]
+    environment: {ZKA_TRUST_PROXY: "1"}        # 只经 platform nginx（隧道）进来，X-Real-IP 由 nginx 设
+    read_only: true
+    tmpfs: ["/tmp:size=600m"]            # 上传暂存（Werkzeug 大文件先落 /tmp）
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    mem_limit: 768m
+    restart: unless-stopped
+  worker:
+    image: ziku-admin:latest
+    command: ["/app/v2/venv/bin/python", "worker.py"]
+    volumes: ["./data:/data", "./keys/deploy:/keys/deploy:ro", "./keys/known_hosts:/keys/known_hosts:ro"]
+    environment: {ZKA_DEPLOY: "/app/admin/deploy.sh"}
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    mem_limit: 2560m
+    cpus: 4
+    restart: unless-stopped
+    depends_on: [web]
+  tunnel:                                # 反向隧道：platform 127.0.0.1:18790 -> web:8790；钥匙在 platform 上只许这一个转发
+    image: ziku-admin:latest
+    command: ["autossh", "-M", "0", "-N", "-i", "/keys/tunnel", "-o", "IdentitiesOnly=yes",
+              "-o", "UserKnownHostsFile=/keys/known_hosts", "-o", "StrictHostKeyChecking=yes", "-o", "BatchMode=yes",
+              "-o", "ServerAliveInterval=30", "-o", "ServerAliveCountMax=3", "-o", "ExitOnForwardFailure=yes",
+              "-R", "127.0.0.1:18790:web:8790", "op@123.56.245.17"]
+    volumes: ["./keys/tunnel:/keys/tunnel:ro", "./keys/known_hosts:/keys/known_hosts:ro"]
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    mem_limit: 64m
+    restart: unless-stopped
+    depends_on: [web]

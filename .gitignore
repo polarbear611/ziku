@@ -21,3 +21,5 @@ __pycache__/
 /v2/books/*/pages/
 /v2/books/*/out3/
 /v2/books/*/glyph/
+/v2/staging/
+!/admin/
