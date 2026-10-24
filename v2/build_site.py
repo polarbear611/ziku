@@ -11,7 +11,8 @@ import json, os, glob, shutil, sys, time, subprocess
 from opencc import OpenCC
 import align
 
-SITE = f'{align.ROOT}/v2/site'
+SITE = os.environ.get('ZIKU_SITE', f'{align.ROOT}/v2/site')            # 后台预览：ZIKU_SITE 指到预览目录
+BOOKS = os.environ.get('ZIKU_BOOKS_DIR', f'{align.ROOT}/v2/books')
 ORDER = ['baomu']                      # 网站下拉里的顺序，未列出的按目录名排在后面
 
 def glyph_dir(book):
@@ -21,7 +22,7 @@ def glyph_dir(book):
     return out.decode().strip()
 
 def build(book, t2s):
-    conf = json.load(open(f'{align.ROOT}/v2/books/{book}/book.json'))
+    conf = json.load(open(f'{BOOKS}/{book}/book.json'))
     gl, wdir = glyph_dir(book), conf['dir']
     skip, drop = set(conf.get('skip', [])), {tuple(d) for d in conf.get('drop', [])}
     alias = conf.get('alias', {})       # 帖上的罕用异体 -> 检索用的通行字（只加简体索引，不改字头）
@@ -68,7 +69,7 @@ def build(book, t2s):
 def main():
     t2s = OpenCC('t2s').convert
     books = sys.argv[1:] or sorted((os.path.basename(os.path.dirname(f))
-                                    for f in glob.glob(f'{align.ROOT}/v2/books/*/book.json')),
+                                    for f in glob.glob(f'{BOOKS}/*/book.json')),
                                    key=lambda b: (b not in ORDER, ORDER.index(b) if b in ORDER else 0, b))
     if os.path.exists(SITE):
         shutil.rmtree(SITE)

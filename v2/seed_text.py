@@ -18,7 +18,14 @@ def cells(pid):
     b = align.binarize(img)
     H, W = b.shape
     prof = align.smooth(b.sum(0).astype(float), 15)
-    pk, _ = find_peaks(prof, distance=W * 0.15, prominence=prof.max() * 0.12)
+    dist = W * 0.15
+    if os.environ.get('ZIKU_SEED_PITCH') == 'auto':     # 小字多列的页：用投影自相关测列距（默认关，旧帖初稿不变）
+        p0 = prof - prof.mean()
+        ac = np.correlate(p0, p0, 'full')[len(p0) - 1:]
+        lags, _ = find_peaks(ac[20:int(W * 0.4)])
+        if len(lags):
+            dist = (lags[0] + 20) * 0.6
+    pk, _ = find_peaks(prof, distance=dist, prominence=prof.max() * 0.12)
     pk = np.sort(pk)[::-1]
     pitch = float(np.median(np.abs(np.diff(pk)))) if len(pk) > 1 else W / 4
     out = []

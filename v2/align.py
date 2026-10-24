@@ -13,7 +13,7 @@ os.makedirs(OUT, exist_ok=True)
 # 多部字帖：环境变量 ZIKU_BOOK 选帖（v2/books/<帖>/book.json），默认姜夔《保母帖》。
 # 保母帖沿用最早的目录（work/pages、v2/text、v2/out3、v2/glyph），新帖的数据都放在 v2/books/<帖>/ 下
 BOOK = os.environ.get('ZIKU_BOOK', 'baomu')
-BOOKDIR = f'{ROOT}/v2/books/{BOOK}'
+BOOKDIR = f"{os.environ.get('ZIKU_BOOKS_DIR', ROOT + '/v2/books')}/{BOOK}"   # ZIKU_BOOKS_DIR：无人值守入库的暂存区，不进正式字库
 CONF = json.load(open(f'{BOOKDIR}/book.json'))
 if BOOK == 'baomu':
     PAGES, TEXT, TOKENS = f'{WORK}/pages', f'{ROOT}/v2/text', f'{WORK}/tokens'
@@ -46,7 +46,7 @@ def column_texts(pid):
     return cols
 
 _hcache = {}
-_font = ImageFont.truetype(FONT, 100)
+_font = ImageFont.truetype(FONT, 100, index=int(os.environ.get('ZIKU_FONT_INDEX', 0)))   # ttc 取第几个字面（Noto Serif CJK 的繁体是 TC）
 def glyph_ratio(ch):
     """字形紧包围盒高/宽 占字身比例（宋体），作预期高度先验"""
     if ch not in _hcache:
